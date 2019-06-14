@@ -13,7 +13,7 @@ Features:
 
 ## Usage Example:
 
-````
+```
 docker run -ti --rm \
     -e OIDC_PROVIDER_TEMAPLATE=azure \
     -e OIDC_PROVIDER_AZURE_TENANTID=${YOUR_AZURE_TENANT} \
