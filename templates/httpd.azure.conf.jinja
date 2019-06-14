@@ -1,0 +1,17 @@
+{% if oidc.provider.discovery.url is defined %}
+OIDCProviderMetadataURL {{ oidc.provider.discovery.url }}
+{% else %}
+OIDCProviderMetadataURL https://login.microsoftonline.com/{{ oidc.provider.azure.tenantid }}/v2.0/.well-known/openid-configuration
+{% endif %}
+
+{% if oidc.provider.discovery.jwksuri is defined %}
+OIDCProviderJwksUri {{ oidc.provider.discovery.jwksuri }}
+{% else %}
+OIDCProviderJwksUri https://login.microsoftonline.com/{{ oidc.provider.azure.tenantid }}/discovery/v2.0/keys
+{% endif %}
+
+OIDCClientID {{ oidc.client.id }}
+OIDCClientSecret {{ oidc.client.secret.file|readfile }}
+
+OIDCScope "{{ oidc.scope|default("openid email") }}"
+OIDCRemoteUserClaim {{ oidc.claims.username|default('email') }}

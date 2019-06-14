@@ -1,0 +1,178 @@
+{% if oidc.frontend.ssl.enable|boolean|default(false) %}
+ServerName https://{{ oidc.frontend.hostname|default(hostname) }}
+{% endif %}
+
+ProxyPreserveHost on
+
+{% if odic.frontend.disable.caching|boolean|default(false) %}
+Header unset ETag
+Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+Header set Pragma "no-cache"
+{% endif %}
+
+{% if oidc.proxy.logfile is defined %}
+LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" combined
+CustomLog {{ oidc.proxy.logfile }} combined
+{% endif %}
+
+OIDCRedirectURI {{ oidc.proxy.redirecturi|default('/oauth2/callback') }}
+
+{% if oidc.provider.template is defined %}
+    {% include "httpd." + oidc.provider.template + ".conf.jinja" %}
+{% else %}
+OIDCProviderMetadataURL {{ oidc.provider.discovery.url }}
+
+    {% if oidc.provider.issuer is defined %}
+OIDCProviderIssuer {{ oidc.provider.issuer }}
+    {% endif %}
+
+    {% if oidc.provider.discovery.jwksuri %}
+OIDCProviderJwksUri {{ oidc.provider.discovery.jwksuri }}
+    {% endif %}
+
+    {% if oidc.provider.endpoints.auth.url is defined %}
+OIDCProviderAuthorizationEndpoint {{ oidc.provider.endpoints.auth.url }}
+    {% endif %}
+
+    {% if oidc.provider.endpoints.auth.params is defined %}
+OIDCAuthRequestParams {{ oidc.provider.endpoints.auth.params }}
+    {% endif %}
+
+OIDCProviderAuthRequestMethod {{ oidc.provider.endpoints.auth.method|default("GET") }}
+
+    {% if oidc.provider.endpoints.token.url is defined %}
+OIDCProviderTokenEndpoint {{ oidc.provider.endpoints.token.url }}
+    {% endif %}
+
+    {% if oidc.provider.endpoints.token.auth is defined %}
+OIDCProviderTokenEndpointAuth {{ oidc.provider.endpoints.token.auth }}
+    {% endif %}
+
+OIDCPassIDTokenAs {{ oidc.idtoken.method|default('claims') }}
+
+    {% if oidc.provider.endpoints.token.params is defined %}
+OIDCProviderTokenEndpointParams {{ oidc.provider.endpoints.token.params }}
+    {% endif %}
+
+    {% if oidc.provider.endpoints.token.refreshseconds is defined %}
+OIDCRefreshAccessTokenBeforeExpiry {{ oidc.provider.endpoints.token.refreshseconds }}
+    {% endif %}
+
+OIDCIDTokenIatSlack {{ oidc.provider.endpoints.token.drift|default(600) }}
+
+    {% if oidc.provider.endpoints.logout is defined %}
+OIDCProviderEndSessionEndpoint {{ oidc.provider.endpoints.logout }}
+    {% endif %}
+
+    {% if oidc.provider.endpoints.userinfo is defined %}
+OIDCProviderUserInfoEndpoint {{ oidc.provider.endpoints.userinfo }}
+    {% endif %}
+
+OIDCUserInfoTokenMethod {{ oidc.provider.endpoints.userinfo.auth|default("authz_header") }}
+OIDCPassUserInfoAs {{ oidc.userinfo.method|default('claims') }}
+OIDCRemoteUserClaim {{ oidc.claims.username|default('sub') }}
+
+    {% if oidc.scope is defined %}
+OIDCScope "{{ oidc.scope }}"
+    {% endif %}
+
+OIDCClientID {{ oidc.client.id }}
+
+    {% if oidc.client.secret.file is defined %}
+OIDCClientSecret {{ oidc.client.secret.file|readfile }}
+    {% endif %}
+
+    {% if oidc.client.certificate.file is defined %}
+OIDCClientTokenEndpointKey {{ oidc.client.certificate.file }}
+    {% endif %}
+
+OIDCResponseType {{ oidc.client.response.type|default("code") }}
+
+    {% if oidc.client.response.mode is defined %}
+OIDCResponseMode {{ oidc.client.response.mode }}
+    {% endif %}
+
+    {% if oidc.provider.insecure|boolean|default(false) %}
+OIDCSSLValidateServer off
+    {% endif %}
+{% endif %}
+
+OIDCCryptoPassphrase {{ oidc.crypto.passphrase.file|readfile }}
+OIDCCookiePath {{ oidc.cookie.path|default("/") }}
+OIDCCookie {{ oidc.cookie.name|default("mod_auth_openidc_session") }}
+OIDCSessionCookieChunkSize {{ oidc.cookie.chunksize|default(4000) }}
+
+OIDCCookieHTTPOnly {% if oidc.cookie.httponly|boolean|default(true) %}On{% else %}Off{% endif %}
+
+OIDCCookieSameSite {% if oidc.cookie.samesite|boolean|default(true) %}On{% else %}Off{% endif %}
+
+{% if oidc.cookie.domain is defined %}
+OIDCCookieDomain {{ oidc.cookie.domain }}
+{% endif %}
+
+OIDCSessionInactivityTimeout {{ oidc.session.idletimeout|default(300) }}
+OIDCSessionMaxDuration {{ oidc.session.maxduration|default(3600 * 8) }}
+OIDCSessionType {{ oidc.session.storage.type|default("server-cache") }}
+
+OIDCSessionCacheFallbackToCookie {% if oidc.session.storage.cookiefallback|boolean|default(false) %}On{% else %}Off{% endif %}
+
+OIDCCacheType {{ oidc.cache.type|default("shm") }}
+
+{% if oidc.cache.type|default("shm") == "shm" %}
+OIDCCacheShmMax {{ oidc.cache.shm.max.count|default(500) }}
+OIDCCacheShmEntrySizeMax {{ oidc.cache.shm.max.size|default(16913) }}
+{% elif oidc.cache.type == "file" %}
+OIDCCacheDir {{ oidc.cache.file.dir|default("/var/cache/apache2/mod_auth_openidc/cache") }}
+OIDCCacheFileCleanInterval {{ oidc.cache.file.cleaninterval|default(60) }}
+{% elif oidc.cache.type == "memcache" %}
+OIDCMemCacheServers "{{ oidc.cache.memcache.servers }}"
+{% elif oidc.cache.type == "redis" %}
+OIDCRedisCacheServer {{ oidc.cache.redis.host }}
+OIDCRedisCachePassword {{ oidc.cache.redis.password.file|readfile }}
+{% endif %}
+
+{% if oidc.default.urls.postlogin is defined %}
+OIDCDefaultURL {{ oidc.defaulturl }}
+{% endif %}
+
+{% if oidc.default.urls.postlogout is defined %}
+OIDCDefaultLoggedOutURL {{ oidc.default.urls.postlogout }}
+{% endif %}
+
+OIDCHTTPTimeoutLong {{ oidc.protocol.timeouts.long|default(60) }}
+OIDCHTTPTimeoutShort {{ oidc.protocol.timeouts.short|default(5) }}
+OIDCStateTimeout {{ oidc.protocol.timeouts.state|default(300) }}
+
+OIDCPassClaimsAs {{ oidc.claims.method|default('environment') }}
+OIDCClaimDelimiter {{ oidc.claims.delimiter|default(",") }}
+
+{% if oidc.claims.blacklist is defined %}
+OIDCBlackListClaims {{ location.claims.blacklist }}
+{% endif %}
+{% if oidc.claims.whitelist is defined %}
+OIDCWhiteListedClaims {{ location.claims.whitelist }}
+{% endif %}
+
+{% for location in oidc.secure.paths.values() %}
+<Location {{ location.path }}>
+    {% if location.scope is defined %}
+    OIDCPathScope {{ location.scope }}
+    {% endif %}
+
+    {% if location.auth.params is defined %}
+    OIDCPathAuthRequestParams {{ location.endpoints.auth.params }}
+    {% endif %}
+
+    OIDCAuthNHeader {{ location.headers.username|default('X-Remote-User') }}
+    OIDCUnAuthAction {{ location.actions.notloggedin|default('auth') }}
+    OIDCUnAutzAction {{ location.actions.unauthorized|default('401') }}
+
+    OIDCPassRefreshToken {% if location.refreshtoken.pass|boolean|default(false) %}On{% else %}Off{% endif %}
+
+    ProxyPass {{ location.backend.url }} {{ location.backend.flags|default("") }}
+    ProxyPassReverse {{ location.backend.url }}
+
+    AuthType "openid-connect"
+    Require {{ location.require|default('valid-user') }}
+</Location>
+{% endfor %}
