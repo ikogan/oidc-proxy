@@ -2,9 +2,19 @@
 ServerName https://{{ oidc.frontend.hostname|default(hostname) }}
 {% endif %}
 
+RewriteEngine on
 ProxyPreserveHost on
 
-{% if odic.frontend.disable.caching|boolean|default(false) %}
+{% if oidc.frontend.ssl.force %}
+RewriteCond %{HTTPS} !=on
+RewriteRule ^/?(.*) https://%{SERVER_NAME}/$1 [R,L]
+{% enfif %}
+
+{% for redirect in oidc.frontend.redirects|default([]) %}
+RewriteRule {{ redirect.rule }} {{ redirect.destination }} [R={% if redirect.temporary %}302{% else %}{{ redirect.code|default(301) }}{% endif %}]
+{% endfor %}
+
+{% if oidc.frontend.disable.caching|boolean|default(false) %}
 Header unset ETag
 Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
 Header set Pragma "no-cache"
@@ -155,13 +165,14 @@ OIDCWhiteListedClaims {{ location.claims.whitelist }}
 
 {% for location in oidc.secure.paths.values() %}
 <Location {{ location.path }}>
-    {% if location.scope is defined %}
+    {% if not location.deny|boolean|default(false) %}
+        {% if location.scope is defined %}
     OIDCPathScope {{ location.scope }}
-    {% endif %}
+        {% endif %}
 
-    {% if location.auth.params is defined %}
+        {% if location.auth.params is defined %}
     OIDCPathAuthRequestParams {{ location.endpoints.auth.params }}
-    {% endif %}
+        {% endif %}
 
     OIDCAuthNHeader {{ location.headers.username|default('X-Remote-User') }}
     OIDCUnAuthAction {{ location.actions.notloggedin|default('auth') }}
@@ -174,5 +185,8 @@ OIDCWhiteListedClaims {{ location.claims.whitelist }}
 
     AuthType "openid-connect"
     Require {{ location.require|default('valid-user') }}
+    {% else %}
+    Require all denied
+    {% endif %}
 </Location>
 {% endfor %}

@@ -15,7 +15,7 @@ Features:
 
 ```
 docker run -ti --rm \
-    -e OIDC_PROVIDER_TEMAPLATE=azure \
+    -e OIDC_PROVIDER_TEMPLATE=azure \
     -e OIDC_PROVIDER_AZURE_TENANTID=${YOUR_AZURE_TENANT} \
     -e OIDC_CLIENT_ID=${YOUR_CLIENT_ID} \
     -e OIDC_CLIENT_SECRET_FILE=/var/run/secrets/azure-client-secret \
@@ -47,6 +47,18 @@ of this container.
 
 **OIDC_FRONTEND_DISABLE_CACHING**: Send various no-cache headers, useful for development.
 
+**OIDC_FRONTEND_SSL_FORCE**: Redirect all unencrypted requests to SSL.
+
+**OIDC_FRONTEND_REDIRECTS**: List of redirect rules. Each of these is a templated
+[Apache Rewrite rule](https://httpd.apache.org/docs/current/mod/mod_rewrite.html). Each variable should
+be of the following form:
+
+| Variable | Default | Mapping |
+| OIDC_FRONTEND_REDIRECTS_#_RULE | | An Apache rewrite pattern to match the incoming URL |
+| OIDC_FRONTEND_REDIRECTS_#_DESTINATION | | The URL to which to redirect the user in Apache subtitution form. |
+| OIDC_FRONTEND_REDIRECTS_#_TEMPORARY | false | By default, all redirects are permanent (301) unless this is set to true |
+| OIDC_FRONTEND_REDIRECTS_#_CODE | 301 | Customize the status code of the redirect. Note that this can't be used if TEMPORARY is also set |
+
 **OIDC_PROVIDER_TEMPLATE**: Use a specific template to configure httpd rather than the generic options. Some
 Configuration options will not longer be avaialble (mostly those that control how the proxy will interact with
 a provider). Templates are included from `templates/httpd.${OIDC_PROVIDER_TEMPLATE}.conf.jinja`.
@@ -69,6 +81,7 @@ will not require authentication for any URLs. This value is a set of several env
 | OIDC_SECURE_PATHS_#_BACKEND_URL | | Required. URL of the backend for this frontend url. |
 | OIDC_SECURE_PATHS_#_BACKEND_FLAGS | Any proxy flags for this backend. See [the `ProxyPass` docs](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxypass) |
 | OIDC_SECURE_PATHS_#_REQUIRE | `valid-user` | Rule for this location. |
+| OIDC_SECURE_PATHS_#_DENY | false | Just deny all requests to this URL outright. Disabled OIDC on this path. |
 
 ## Provider Templates
 
@@ -87,4 +100,3 @@ Azure. The following variables are available:
 | OIDC_PROVIDER_JWKSURI | Based on Tenant ID | |
 | OIDC_SCOPE | `openid email` | |
 | OIDC_CLAIMS_USERNAME | `email` | Use the user's e-mail as the value to populate the `X-Remote-User` header. |
-
