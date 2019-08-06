@@ -54,6 +54,7 @@ of this container.
 be of the following form:
 
 | Variable | Default | Mapping |
+| -------- | ------- | ------- |
 | OIDC_FRONTEND_REDIRECTS_#_RULE | | An Apache rewrite pattern to match the incoming URL |
 | OIDC_FRONTEND_REDIRECTS_#_DESTINATION | | The URL to which to redirect the user in Apache subtitution form. |
 | OIDC_FRONTEND_REDIRECTS_#_TEMPORARY | false | By default, all redirects are permanent (301) unless this is set to true |
