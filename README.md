@@ -34,6 +34,8 @@ environment variables may be a future enhancement if it becomes necessary.
 Many of the values documented in [mod_auth_openidc](https://github.com/zmartzone/mod_auth_openidc/blob/master/auth_openidc.conf)
 are supported. Check the [config template](tempaltes/httpd.conf.jinja) for details. Here are some highlights:
 
+**OIDC_PROXY_DUMP_CONFIG**: Dump the generated configuration to the log on startup. Default: false.
+
 **OIDC_PROXY_CONFIG_PATH**: Location where the configuration file will be placed. Shouldn't be changed unless
 you're doing something interested. Default: `/etc/httpd/conf.d/proxy.conf`.
 
@@ -46,8 +48,6 @@ of this container.
 **OIDC_FRONTEND_HOSTNAME**: Only used for SSL, to support SNI properly.
 
 **OIDC_FRONTEND_DISABLE_CACHING**: Send various no-cache headers, useful for development.
-
-**OIDC_FRONTEND_SSL_FORCE**: Redirect all unencrypted requests to SSL.
 
 **OIDC_FRONTEND_REDIRECTS**: List of redirect rules. Each of these is a templated
 [Apache Rewrite rule](https://httpd.apache.org/docs/current/mod/mod_rewrite.html). Each variable should
@@ -73,6 +73,7 @@ will not require authentication for any URLs. This value is a set of several env
 |----------|---------|---------|
 | OIDC_SECURE_PATHS_#_PATH | | URL path for which this rule applies. |
 | OIDC_SECURE_PATHS_#_SCOPE| | Optional. Define scopes specific to this path. |
+| OIDC_SECURE_PATHS_#_AUTH_TYPE| `openid-connect` | The Apache authentication type for this path. Use "none" to disable authenticate |
 | OIDC_SECURE_PATHS_#_AUTH_PARAMS | | Optional. Add parameters to send to the authorization endpoint of the provider. |
 | OIDC_SECURE_PATHS_#_HEADERS_USERNAME | `X-Remote-User` | Header in which to send the user's username |
 | OIDC_SECURE_PATHS_#_ACTIONS_NOTLOGGEDIN | `auth` | Action to take when a request it not authenticated. Can be `auth` or `401`, authenticate or issue a 401. |
@@ -81,7 +82,17 @@ will not require authentication for any URLs. This value is a set of several env
 | OIDC_SECURE_PATHS_#_BACKEND_URL | | Required. URL of the backend for this frontend url. |
 | OIDC_SECURE_PATHS_#_BACKEND_FLAGS | Any proxy flags for this backend. See [the `ProxyPass` docs](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxypass) |
 | OIDC_SECURE_PATHS_#_REQUIRE | `valid-user` | Rule for this location. |
-| OIDC_SECURE_PATHS_#_DENY | false | Just deny all requests to this URL outright. Disabled OIDC on this path. |
+
+Note, to completely forbid a particular path, you could sepcify the following:
+
+```dotenv
+OIDC_SECURE_PATHS_1_PATH=/
+OIDC_SECURE_PATHS_1_AUTHTYPE=none
+OIDC_SECURE_PATHS_1_REQUIRE=all denied
+```
+
+It's important to set `OIDC_SECURE_PATHS_1_AUTHTYPE` to none so that we don't needlessly
+prompt for authentication when it's going to be denied anyway.
 
 ## Provider Templates
 

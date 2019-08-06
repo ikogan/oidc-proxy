@@ -5,12 +5,7 @@ ServerName https://{{ oidc.frontend.hostname|default(hostname) }}
 RewriteEngine on
 ProxyPreserveHost on
 
-{% if oidc.frontend.ssl.force %}
-RewriteCond %{HTTPS} !=on
-RewriteRule ^/?(.*) https://%{SERVER_NAME}/$1 [R,L]
-{% enfif %}
-
-{% for redirect in oidc.frontend.redirects|default([]) %}
+{% for key, redirect in oidc.frontend.redirects|default({})|dictsort %}
 RewriteRule {{ redirect.rule }} {{ redirect.destination }} [R={% if redirect.temporary %}302{% else %}{{ redirect.code|default(301) }}{% endif %}]
 {% endfor %}
 
@@ -163,9 +158,9 @@ OIDCBlackListClaims {{ location.claims.blacklist }}
 OIDCWhiteListedClaims {{ location.claims.whitelist }}
 {% endif %}
 
-{% for location in oidc.secure.paths.values() %}
+{% for key, location in oidc.secure.paths|dictsort %}
 <Location {{ location.path }}>
-    {% if not location.deny|boolean|default(false) %}
+    {% if location.auth.type|default("openid-connect") == "openid-connect" %}
         {% if location.scope is defined %}
     OIDCPathScope {{ location.scope }}
         {% endif %}
@@ -179,14 +174,19 @@ OIDCWhiteListedClaims {{ location.claims.whitelist }}
     OIDCUnAutzAction {{ location.actions.unauthorized|default('401') }}
 
     OIDCPassRefreshToken {% if location.refreshtoken.pass|boolean|default(false) %}On{% else %}Off{% endif %}
+    {% endif %}
 
+    {% if location.backend.url %}
     ProxyPass {{ location.backend.url }} {{ location.backend.flags|default("") }}
     ProxyPassReverse {{ location.backend.url }}
-
-    AuthType "openid-connect"
-    Require {{ location.require|default('valid-user') }}
-    {% else %}
-    Require all denied
     {% endif %}
+
+    AuthType "{{ location.auth.type|default('openid-connect') }}"
+    Require {{ location.require|default('valid-user') }}
 </Location>
 {% endfor %}
+
+<Location /oauth2/callback>
+    AuthType "openid-connect"
+    Require "valid-user"
+</Location>

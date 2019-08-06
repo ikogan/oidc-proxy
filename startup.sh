@@ -22,9 +22,11 @@ fi
 j2tmpl /usr/share/oidc-proxy/templates/httpd.conf.jinja \
     -b /usr/share/oidc-proxy/templates -o "${OIDC_PROXY_CONFIG_PATH}"
 
-if [[ "${1}" = "dump-config" ]]; then
-    cat /etc/httpd/conf.d/proxy.conf
-else
+if [[ "x${OIDC_PROXY_DUMP_CONFIG}" = "xtrue" || "${1}" = "dump-config" ]]; then
+  cat /etc/httpd/conf.d/proxy.conf
+fi
+
+if [[ ! "${1}" = "dump-config" ]]; then
     ln -sf /dev/stderr /var/log/httpd/error_log
     rm -Rf /run/httpd/*
     exec httpd -DFOREGROUND
